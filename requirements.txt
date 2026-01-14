@@ -1,0 +1,13 @@
+certifi==2026.1.4
+et_xmlfile==2.0.0
+jplephem==2.23
+numpy==2.4.1
+openpyxl==3.1.5
+pandas==2.3.3
+python-dateutil==2.9.0.post0
+pytz==2025.2
+sgp4==2.25
+six==1.17.0
+skyfield==1.53
+tabulate==0.9.0
+tzdata==2025.3
