@@ -200,12 +200,12 @@ def run_final_calendar(start_str, days, tz_name="Europe/London"):
 if __name__ == "__main__":
     # --- 設定區域 1: 英國 (自動切換 GMT/BST) ---
     print("正在生成英國 (UK) 曆法...")
-    df_uk = run_final_calendar("1976-01-01", 365*60, tz_name="Europe/London")
+    df_uk = run_final_calendar("1976-01-01", 365*70, tz_name="Europe/London")
     df_uk.to_excel("Calendar_1976_UK_Full.xlsx", index=False)
     
     # --- 設定區域 2: 香港 (HKT) ---
     print("正在生成香港 (HK) 曆法...")
-    df_hk = run_final_calendar("1976-01-01", 365*60, tz_name="Asia/Hong_Kong")
+    df_hk = run_final_calendar("1976-01-01", 365*70, tz_name="Asia/Hong_Kong")
     df_hk.to_excel("Calendar_1976_HK_Full.xlsx", index=False)
     
     print("✅ 完成！已生成兩份檔案：")
