@@ -2,11 +2,17 @@ import pandas as pd
 from datetime import datetime, timedelta, time
 import pytz
 from skyfield import api
+from lunar_python import Lunar  # 需安裝: pip install lunar_python
 
 # --- 初始化天文引擎 ---
 # 請確保目錄下有 'de421.bsp' 文件
 ts = api.load.timescale()
-eph = api.load('de421.bsp')
+try:
+    eph = api.load('de421.bsp')
+except:
+    print("❌ 找不到 de421.bsp 文件，請確保該文件在同一目錄下。")
+    exit()
+    
 sun, earth = eph['sun'], eph['earth']
 
 # --- 1. 基礎字典與對照表 ---
@@ -49,8 +55,19 @@ def get_gz_prop(gz_str):
     if not gz_str or len(gz_str) < 2: return ""
     return f"{GAN_PROPS.get(gz_str[0], '')}{ZHI_PROPS.get(gz_str[1], '')}"
 
+def get_lunar_str(dt_date):
+    """(新增) 獲取農曆字串，如 '正月初一'"""
+    try:
+        # 將 date 轉為 datetime 以避免庫報錯
+        dt_val = datetime.combine(dt_date, time(12, 0))
+        lunar = Lunar.fromDate(dt_val)
+        return f"{lunar.getMonthInChinese()}月{lunar.getDayInChinese()}"
+    except Exception as e:
+        return ""
+
 def get_tai_yuan(m_gz):
     """胎元：月干進一，月支配三"""
+    if not m_gz: return ""
     g_idx = (GAN.index(m_gz[0]) + 1) % 10
     z_idx = (ZHI.index(m_gz[1]) + 3) % 12
     return GAN[g_idx] + ZHI[z_idx]
@@ -97,15 +114,25 @@ def get_day_basic_data(dt_date, tz_info):
     term_idx = int(lon // 15)
     is_yang = not (90 <= lon < 270)
     
-    # 年、月柱邏輯
+    # 1. 計算邏輯年 (立春分界)
     logic_y = dt_date.year
     if lon < 315 and dt_date.month <= 3: logic_y -= 1
     
-    y_gz = GAN[(logic_y - 4) % 10] + ZHI[(logic_y - 4) % 12]
+    # 年柱 (年干支)
+    y_gan_idx = (logic_y - 4) % 10 # 獲取年干索引 (甲=0)
+    y_gz = GAN[y_gan_idx] + ZHI[(logic_y - 4) % 12]
     
+    # 2. 月柱計算 (修正版)
+    # 立春 315 度 = 寅月 (1)
     shifted_lon = (lon - 315) % 360
     zhi_yue = int(shifted_lon // 30) + 1
-    m_gz = GAN[(logic_y % 5 * 2 + zhi_yue + 1) % 10] + ZHI[(zhi_yue + 1) % 12]
+    
+    # 五虎遁：甲己之年丙作首。即 (年干索引 % 5) * 2 + 2 = 寅月天干索引
+    # zhi_yue 為 1 (寅), 2 (卯)...
+    # 公式：(年干索引 % 5 * 2 + 2 + (zhi_yue - 1)) % 10
+    # 簡化後：(年干索引 % 5 * 2 + zhi_yue + 1) % 10
+    m_gan_idx = (y_gan_idx % 5 * 2 + zhi_yue + 1) % 10
+    m_gz = GAN[m_gan_idx] + ZHI[(zhi_yue + 1) % 12]
     
     # 日柱
     ref_day = datetime(2025, 12, 21).date()
@@ -149,6 +176,9 @@ def run_final_calendar(start_str, days, tz_name="Europe/London"):
         d = get_day_basic_data(curr_date, target_tz)
         d_next = get_day_basic_data(next_date, target_tz)
         
+        # 獲取農曆 (新增)
+        lunar_str = get_lunar_str(curr_date)
+        
         # 獲取時區標籤 (如 BST, GMT, HKT)
         tz_label = get_tz_label(curr_date, target_tz)
 
@@ -175,9 +205,10 @@ def run_final_calendar(start_str, days, tz_name="Europe/London"):
             
             rows.append({
                 "日期": curr_date,
+                "農曆": lunar_str, # 加入農曆欄位
                 "時段": name,
                 "時間": period,
-                "時區": tz_label,  # 新增：顯示 BST / GMT / HKT
+                "時區": tz_label,
                 "節氣": display_term if name == "早子時" else "",
                 
                 "年柱": d["y_gz"], "年屬性": get_gz_prop(d["y_gz"]), "年納音": NAYIN.get(d["y_gz"]),
@@ -200,18 +231,18 @@ def run_final_calendar(start_str, days, tz_name="Europe/London"):
 if __name__ == "__main__":
     # --- 設定區域 1: 英國 (自動切換 GMT/BST) ---
     print("正在生成英國 (UK) 曆法...")
-    df_uk = run_final_calendar("2025-01-01", 365*2, tz_name="Europe/London")
-    df_uk.to_excel("Calendar_2025_UK_Full.xlsx", index=False)
+    df_uk = run_final_calendar("2025-01-01", 365, tz_name="Europe/London")
+    df_uk.to_excel("3.1Calendar_2025_UK_Full.xlsx", index=False)
     
     # --- 設定區域 2: 香港 (HKT) ---
     print("正在生成香港 (HK) 曆法...")
-    df_hk = run_final_calendar("2025-01-01", 365*2, tz_name="Asia/Hong_Kong")
-    df_hk.to_excel("Calendar_2025_HK_Full.xlsx", index=False)
+    df_hk = run_final_calendar("2025-01-01", 365, tz_name="Asia/Hong_Kong")
+    df_hk.to_excel("3.1Calendar_2025_HK_Full.xlsx", index=False)
     
-    print("✅ 完成！已生成兩份檔案：")
-    print("1. Calendar_2025_UK_Full.xlsx (會顯示 GMT 或 BST)")
-    print("2. Calendar_2025_HK_Full.xlsx (會顯示 HKT)")
+    print("✅ 完成！已生成兩份檔案 (包含修正後的農曆顯示與月柱計算)：")
+    print("1. 3.1Calendar_2025_UK_Full.xlsx")
+    print("2. 3.1Calendar_2025_HK_Full.xlsx")
     
-    # 預覽英國前幾行，檢查 GMT/BST 標籤
-    print("\n--- 預覽英國數據 (注意時區欄位) ---")
-    print(df_uk[["日期", "時段", "時區", "年柱", "年屬性", "時柱", "時屬性"]].head(13).to_string())
+    # 預覽檢查
+    print("\n--- 預覽數據 (包含農曆與修正的月柱) ---")
+    print(df_hk[["日期", "農曆", "時段", "年柱", "月柱", "日柱"]].head(13).to_string())
