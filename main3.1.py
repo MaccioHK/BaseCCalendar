@@ -231,17 +231,17 @@ def run_final_calendar(start_str, days, tz_name="Europe/London"):
 if __name__ == "__main__":
     # --- 設定區域 1: 英國 (自動切換 GMT/BST) ---
     print("正在生成英國 (UK) 曆法...")
-    df_uk = run_final_calendar("2025-01-01", 365, tz_name="Europe/London")
-    df_uk.to_excel("3.1Calendar_2025_UK_Full.xlsx", index=False)
+    df_uk = run_final_calendar("1976-01-01", 365*70, tz_name="Europe/London")
+    df_uk.to_excel("3.1Calendar_1976_UK_Full.xlsx", index=False)
     
     # --- 設定區域 2: 香港 (HKT) ---
     print("正在生成香港 (HK) 曆法...")
-    df_hk = run_final_calendar("2025-01-01", 365, tz_name="Asia/Hong_Kong")
-    df_hk.to_excel("3.1Calendar_2025_HK_Full.xlsx", index=False)
+    df_hk = run_final_calendar("1976-01-01", 365*70, tz_name="Asia/Hong_Kong")
+    df_hk.to_excel("3.1Calendar_1976_HK_Full.xlsx", index=False)
     
     print("✅ 完成！已生成兩份檔案 (包含修正後的農曆顯示與月柱計算)：")
-    print("1. 3.1Calendar_2025_UK_Full.xlsx")
-    print("2. 3.1Calendar_2025_HK_Full.xlsx")
+    print("1. 3.1Calendar_1976_UK_Full.xlsx")
+    print("2. 3.1Calendar_1976_HK_Full.xlsx")
     
     # 預覽檢查
     print("\n--- 預覽數據 (包含農曆與修正的月柱) ---")
